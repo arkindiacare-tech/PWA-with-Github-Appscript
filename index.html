@@ -33,6 +33,7 @@
       margin: 10px 0;
       border: 1px solid #ccc;
       border-radius: 6px;
+      box-sizing: border-box;
     }
     button {
       background-color: #4285F4;
@@ -46,6 +47,17 @@
       margin-top: 10px;
     }
     button:hover { background-color: #3367D6; }
+    
+    /* Dedicated Styling for our New Install Button */
+    #installAppBtn {
+      background-color: #34A853; /* Google Green */
+      font-weight: bold;
+      display: none; /* Hidden by default until Chrome says it's ready */
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    #installAppBtn:hover { background-color: #2b8c46; }
+
     #statusMessage {
       margin-top: 15px;
       font-size: 14px;
@@ -55,6 +67,8 @@
   </style>
 </head>
 <body>
+
+  <button id="installAppBtn">📲 Install App to Homescreen</button>
 
   <div class="card">
     <h2>Fast Notes PWA</h2>
@@ -69,7 +83,45 @@
 
   <script>
     // ==========================================
-    // 1. REGISTER SERVICE WORKER
+    // 1. PWA INSTALLATION LOGIC (The Magic Fix)
+    // ==========================================
+    let deferredPrompt;
+    const installBtn = document.getElementById('installAppBtn');
+
+    // Chrome fires this event when the app is eligible to be installed
+    window.addEventListener('beforeinstallprompt', (e) => {
+      console.log("Install prompt triggered by Chrome!");
+      // Prevent the default mini-infobar from appearing
+      e.preventDefault();
+      // Stash the event so we can trigger it when the user clicks our button
+      deferredPrompt = e;
+      // Make our giant green button visible!
+      installBtn.style.display = 'block';
+    });
+
+    // When the user clicks our green button...
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        // Show Chrome's native installation prompt
+        deferredPrompt.prompt();
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`User response: ${outcome}`);
+        // We can't use the prompt again, so discard it
+        deferredPrompt = null;
+        // Hide the button since they installed it
+        installBtn.style.display = 'none';
+      }
+    });
+
+    // Listen to see if they successfully installed it
+    window.addEventListener('appinstalled', () => {
+      console.log('Success! PWA was installed to the device.');
+      installBtn.style.display = 'none';
+    });
+
+    // ==========================================
+    // 2. REGISTER SERVICE WORKER
     // ==========================================
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -80,7 +132,7 @@
     }
 
     // ==========================================
-    // 2. INDEXED-DB LOGIC
+    // 3. INDEXED-DB LOGIC
     // ==========================================
     let db;
     const request = indexedDB.open("GasAppDatabase", 1);
@@ -121,8 +173,6 @@
         input.value = ""; 
         status.innerText = "Saved to IndexedDB instantly!";
         status.style.color = "green";
-        
-        // FUTURE: Fetch API call to your GAS Web App URL to sync data to Sheets
       };
     }
   </script>
