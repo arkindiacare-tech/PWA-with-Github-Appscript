@@ -1,51 +1,89 @@
-```javascript
-const CACHE_NAME = 'city-pwa-v1';
+const CACHE_NAME='city-pwa-v2';
 
-const urlsToCache = [
-  './',
-  './index.html',
-  './manifest.json'
+const urlsToCache=[
+'./',
+'./index.html',
+'./manifest.json',
+'https://cdn-icons-png.flaticon.com/512/684/684908.png'
 ];
 
 
 
 self.addEventListener(
-  'install',
+'install',
 
-  event => {
+event=>{
 
-    event.waitUntil(
+event.waitUntil(
 
-      caches.open(CACHE_NAME)
+caches.open(CACHE_NAME)
+.then(cache=>{
 
-        .then(cache => {
+return cache.addAll(
+urlsToCache
+);
 
-          return cache.addAll(
-            urlsToCache
-          );
-        })
-    );
-  }
+})
+
+);
+
+self.skipWaiting();
+
+}
 );
 
 
 
 self.addEventListener(
-  'fetch',
+'activate',
 
-  event => {
+event=>{
 
-    event.respondWith(
+event.waitUntil(
 
-      caches.match(event.request)
+caches.keys().then(keys=>{
 
-        .then(response => {
+return Promise.all(
 
-          return response ||
-            fetch(event.request);
-        })
-    );
-  }
+keys.map(key=>{
+
+if(key!==CACHE_NAME){
+
+return caches.delete(key);
+
+}
+
+})
+
 );
-```
 
+})
+
+);
+
+self.clients.claim();
+
+}
+);
+
+
+
+self.addEventListener(
+'fetch',
+
+event=>{
+
+event.respondWith(
+
+caches.match(event.request)
+.then(response=>{
+
+return response||
+fetch(event.request);
+
+})
+
+);
+
+}
+);
