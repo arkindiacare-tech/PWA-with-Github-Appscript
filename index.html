@@ -1,0 +1,462 @@
+```html
+<!DOCTYPE html>
+<html>
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0">
+
+  <title>City PWA</title>
+
+  <link
+    rel="manifest"
+    href="manifest.json">
+
+  <meta
+    name="theme-color"
+    content="#111827">
+
+  <style>
+
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+    }
+
+    body{
+
+      font-family:Arial,sans-serif;
+
+      background:#111827;
+      color:white;
+
+      min-height:100vh;
+
+      padding:20px;
+
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+
+    .app{
+
+      width:100%;
+      max-width:500px;
+
+      background:#1f2937;
+
+      padding:24px;
+
+      border-radius:24px;
+    }
+
+    h1{
+      margin-bottom:8px;
+    }
+
+    .subtitle{
+
+      opacity:0.7;
+
+      margin-bottom:24px;
+    }
+
+    input{
+
+      width:100%;
+
+      padding:14px;
+
+      border:none;
+
+      border-radius:12px;
+
+      margin-bottom:14px;
+
+      background:#374151;
+
+      color:white;
+    }
+
+    button{
+
+      width:100%;
+
+      padding:14px;
+
+      border:none;
+
+      border-radius:12px;
+
+      background:#2563eb;
+
+      color:white;
+
+      font-size:16px;
+
+      margin-bottom:12px;
+
+      cursor:pointer;
+    }
+
+    .install-btn{
+      display:none;
+    }
+
+    .city{
+
+      background:#374151;
+
+      padding:12px;
+
+      border-radius:10px;
+
+      margin-top:10px;
+    }
+
+    .status{
+
+      margin-top:14px;
+
+      opacity:0.7;
+
+      font-size:14px;
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<div class="app">
+
+  <h1>City PWA</h1>
+
+  <div class="subtitle">
+    PWA + Google Sheet Trial
+  </div>
+
+
+  <!-- SETTINGS -->
+
+  <input
+    id="apiUrl"
+    placeholder="Paste Apps Script URL">
+
+
+  <button onclick="saveConnection()">
+    Save Connection
+  </button>
+
+
+  <button
+    id="installBtn"
+    class="install-btn">
+    Install App
+  </button>
+
+
+  <hr style="margin:20px 0;border-color:#374151;">
+
+
+  <!-- CITY INPUT -->
+
+  <input
+    id="cityInput"
+    placeholder="Enter City Name">
+
+
+  <button onclick="saveCity()">
+    Save City
+  </button>
+
+
+  <button onclick="loadCities()">
+    Load Cities
+  </button>
+
+
+  <div
+    class="status"
+    id="status">
+    Ready
+  </div>
+
+
+  <div id="cityList"></div>
+
+</div>
+
+
+
+<script>
+
+  // REGISTER SERVICE WORKER
+
+  if('serviceWorker' in navigator){
+
+    navigator.serviceWorker
+      .register('service-worker.js')
+
+      .then(() => {
+
+        console.log(
+          'SW Registered'
+        );
+
+      })
+
+      .catch(err => {
+
+        console.error(err);
+
+      });
+  }
+
+
+
+  // INSTALL PROMPT
+
+  let deferredPrompt;
+
+  const installBtn =
+    document.getElementById(
+      'installBtn'
+    );
+
+
+  window.addEventListener(
+    'beforeinstallprompt',
+
+    (e) => {
+
+      e.preventDefault();
+
+      deferredPrompt = e;
+
+      installBtn.style.display =
+        'block';
+    }
+  );
+
+
+
+  installBtn.addEventListener(
+    'click',
+
+    async () => {
+
+      deferredPrompt.prompt();
+
+      await deferredPrompt.userChoice;
+
+      deferredPrompt = null;
+
+      installBtn.style.display =
+        'none';
+    }
+  );
+
+
+
+  // LOAD SAVED URL
+
+  window.onload = () => {
+
+    const savedUrl =
+      localStorage.getItem(
+        'apiUrl'
+      );
+
+    if(savedUrl){
+
+      document.getElementById(
+        'apiUrl'
+      ).value = savedUrl;
+    }
+  };
+
+
+
+  // SAVE CONNECTION
+
+  function saveConnection(){
+
+    const url =
+      document.getElementById(
+        'apiUrl'
+      ).value;
+
+    localStorage.setItem(
+      'apiUrl',
+      url
+    );
+
+    setStatus(
+      'Connection Saved ✅'
+    );
+  }
+
+
+
+  // SAVE CITY
+
+  async function saveCity(){
+
+    const apiUrl =
+      localStorage.getItem(
+        'apiUrl'
+      );
+
+    if(!apiUrl){
+
+      alert(
+        'Please Save Apps Script URL First'
+      );
+
+      return;
+    }
+
+    const city =
+      document.getElementById(
+        'cityInput'
+      ).value;
+
+
+    setStatus(
+      'Saving City...'
+    );
+
+
+    try{
+
+      const response =
+        await fetch(apiUrl, {
+
+          method:'POST',
+
+          body:JSON.stringify({
+            city:city
+          })
+        });
+
+      const data =
+        await response.json();
+
+      console.log(data);
+
+      setStatus(
+        'City Saved ✅'
+      );
+
+      document.getElementById(
+        'cityInput'
+      ).value = '';
+
+    }catch(err){
+
+      console.error(err);
+
+      setStatus(
+        'Save Failed ❌'
+      );
+    }
+  }
+
+
+
+  // LOAD CITIES
+
+  async function loadCities(){
+
+    const apiUrl =
+      localStorage.getItem(
+        'apiUrl'
+      );
+
+    if(!apiUrl){
+
+      alert(
+        'Please Save Apps Script URL First'
+      );
+
+      return;
+    }
+
+    setStatus(
+      'Loading Cities...'
+    );
+
+
+    try{
+
+      const response =
+        await fetch(
+          apiUrl +
+          '?action=getCities'
+        );
+
+      const data =
+        await response.json();
+
+      const cityList =
+        document.getElementById(
+          'cityList'
+        );
+
+      cityList.innerHTML = '';
+
+
+      data.reverse().forEach(row => {
+
+        if(row[1]){
+
+          const div =
+            document.createElement('div');
+
+          div.className = 'city';
+
+          div.innerHTML =
+            row[1];
+
+          cityList.appendChild(div);
+        }
+
+      });
+
+      setStatus(
+        'Cities Loaded ✅'
+      );
+
+    }catch(err){
+
+      console.error(err);
+
+      setStatus(
+        'Load Failed ❌'
+      );
+    }
+  }
+
+
+
+  function setStatus(text){
+
+    document.getElementById(
+      'status'
+    ).innerHTML = text;
+  }
+
+</script>
+
+</body>
+</html>
+```
+
