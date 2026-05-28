@@ -1,11 +1,15 @@
 // ==========================================
 // FILE: sw.js (Service Worker)
 // ==========================================
-const CACHE_NAME = 'pwa-cache-v1';
+const CACHE_NAME = 'pwa-cache-v2'; // Updated version number to force a refresh
+
+// We explicitly cache the icons now so Chrome knows it works offline
 const urlsToCache = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
